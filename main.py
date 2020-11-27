@@ -73,59 +73,6 @@ class CSP:
                                 var.domain.remove(val)
                                 break
 
-                # checking < self.size for last var. because it's possible last var doesn't need x
-                # while checking < self.size and checking < up_bound:
-                #     if self.board[var.depth_no][checking] == -1:
-                #         var.domain.pop(0)
-                #         self.board[var.depth_no][up_bound] = 1
-                #         up_bound += 1
-                #
-                #     elif self.board[var.depth_no][checking] == 1:
-                #         tmp_checking = checking
-                #         for j in range(checking + 1, down_bound):
-                #             self.board[var.depth_no][checking] = 1
-                #             var.domain.pop(-1)
-                #             # up_bound -= 1
-                #             checking += 1
-                #         down_bound = tmp_checking
-                #     checking += 1
-
-                # var.fix_up_bound(down_bound)
-                # var.fix_up_bound(up_bound)
-                # if len(var.domain) == 1:
-                #     var.val = var.domain[0]
-                #     if var.val + var.num < self.size:
-                #         self.board[var.depth_no][var.val + var.num] = -1
-                #     checking += 1
-                #     fix = var.val - 1
-                #     while fix >= 0 and self.board[var.depth_no][fix] == 0:
-                #         self.board[var.depth_no][fix] = -1
-                #         fix -= 1
-                #     self.fix_domain_bounds(c_sublist)
-
-                    # # drop last element in domain and x last possible square
-                    # j = down_bound - 1
-                    # while j >= 0 and self.board[var.depth_no][j] == 1:
-                    #     self.board[var.depth_no][var.domain[-1] + var.num - 1] = -1
-                    #     var.domain.pop(-1)
-                    #     if len(var.domain) == 1:
-                    #         var.val = var.domain[0]
-                    #         # self.board[var.depth_no][var.domain[0] + var.num] = -1
-                    #         # self.fix_domain_bounds(c_sublist)
-                    #         break
-                    #     j -= 1
-                    # # drop first element in domain and x first possible square
-                    # j = up_bound
-                    # while j < self.size and self.board[var.depth_no][j] == 1:
-                    #     self.board[var.depth_no][var.domain[0]] = -1
-                    #     var.domain.pop(0)
-                    #     if len(var.domain) == 1:
-                    #         var.val = var.domain[0]
-                    #         # self.board[var.depth_no][var.domain[0] + var.num] = -1
-                    #         # self.fix_domain_bounds(c_sublist)
-                    #         break
-                    #     j += 1
-
     # class method that only uses in node_consistency
     def fix_domain_bounds(self, c_sublist):
         if len(c_sublist) > 1:
@@ -246,7 +193,7 @@ def backtrack_rec(b_csp, no_selected):
     if no_selected == b_csp.no_vars:
         return b_csp
 
-    var = var_generator.get_next_var()
+    var = var_generator.get_var(no_selected)
 
     for value in var.domain:
         var.val = value
@@ -272,34 +219,37 @@ def backtrack_rec(b_csp, no_selected):
             cons = 0
             colored = 0
             y = 0
-            while y < b_csp.size and cons < len(b_csp.row_cons[var.depth_no]) and b_csp.board[var.depth_no][y] != 0:
+            while y < b_csp.size and b_csp.board[var.depth_no][y] != 0:
                 if b_csp.board[var.depth_no][y] == 1:
                     colored += 1
                 elif b_csp.board[var.depth_no][y] == -1:
                     if colored == b_csp.row_cons[var.depth_no][cons].num:
                         colored = 0
-                        cons += 1
+                        if cons < len(b_csp.row_cons[var.depth_no]) - 1:
+                            cons += 1
                     elif colored != 0:
                         break
                 y += 1
-            #     TODO: fix this if condition and check for cols too
-            if (y != b_csp.size and cons != len(b_csp.row_cons[var.depth_no])) or \
-                not (cons == len(b_csp.row_cons[var.depth_no]) or
-                     (cons == len(b_csp.row_cons[var.depth_no]) - 1 and
-                      colored == b_csp.row_cons[var.depth_no][cons].num)):
+            # TODO: fix this if condition and check for cols too
+            # if (y != b_csp.size and cons != len(b_csp.row_cons[var.depth_no])) or \
+            #     not (cons == len(b_csp.row_cons[var.depth_no] and colored != 0) or
+            #          (cons == len(b_csp.row_cons[var.depth_no]) - 1 and
+            #           colored == b_csp.row_cons[var.depth_no][cons].num)):
+            if not (y == b_csp.size and cons == len(b_csp.row_cons[var.depth_no]) - 1
+                    and (colored == 0 or colored == b_csp.row_cons[var.depth_no][cons].num)):
                 reverse_backtrack_step(b_csp, j, value, var, var is b_csp.row_cons[var.depth_no][-1])
                 continue
 
-        j_check = value
-        while j_check < value + var.num:
+        j_check = 0
+        while j_check < b_csp.size:
             c = 0
             while c < len(b_csp.col_cons[j_check]) and b_csp.col_cons[j_check][c].domain:
                 c += 1
             if c != len(b_csp.col_cons[j_check]):
-                reverse_backtrack_step(b_csp, j, value, var, var is b_csp.row_cons[var.depth_no][-1])
                 break
             j_check += 1
-        if j_check != value + var.num:
+        if j_check != b_csp.size:
+            reverse_backtrack_step(b_csp, j, value, var, var is b_csp.row_cons[var.depth_no][-1])
             continue
 
         c = 0
@@ -354,6 +304,9 @@ class VarGenerator:
         next_var = self.var_list[self.idx]
         self.idx += 1
         return next_var
+
+    def get_var(self, idx):
+        return self.var_list[idx]
 
 
 if __name__ == '__main__':
